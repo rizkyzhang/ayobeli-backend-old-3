@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import formData from "express-form-data";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -11,6 +12,7 @@ import { httpLogger, logger } from "./utils/logger";
 const app = express();
 const port = process.env.PORT || 8080;
 const errorHandler = new ErrorHandler();
+const prisma = new PrismaClient();
 
 // parsing application/json
 app.use(express.json());
