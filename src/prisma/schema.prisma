@@ -9,3 +9,58 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model AdminUser {
+  id                Int     @id @default(autoincrement())
+  uid               String  @unique @default(cuid())
+  clerk_id          String? @unique
+  email             String  @unique
+  username          String  @unique
+  profile_image_url String?
+  phone             String?
+  is_deleted        Boolean @default(false)
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("admin_user")
+}
+
+model User {
+  id                Int     @id @default(autoincrement())
+  uid               String  @unique @default(cuid())
+  clerk_id          String? @unique
+  email             String  @unique
+  username          String  @unique
+  profile_image_url String?
+  phone             String?
+  is_deleted        Boolean @default(false)
+
+  user_addresses UserAddress[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("user")
+}
+
+model UserAddress {
+  id             Int     @id @default(autoincrement())
+  uid            String  @unique @default(cuid())
+  address_line_1 String
+  address_line_2 String?
+  city           String
+  postal_code    String
+  phone          String?
+
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("user_address")
+}
