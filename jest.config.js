@@ -12,7 +12,7 @@ module.exports = {
     },
   },
   moduleNameMapper: {
-    "@/(.*)": "<rootDir>/$1",
+    "@/(.*)": "<rootDir>/src/$1",
   },
   moduleDirectories: ["node_modules", "src"],
   modulePathIgnorePatterns: ["dist"],
