@@ -5,9 +5,11 @@
 import { STATUS_CODES } from "http";
 import { NextFunction, Request, Response } from "express";
 import { HttpStatusCode } from "axios";
+import { JsonWebTokenError } from "jsonwebtoken";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+
 import { logger } from "./logger";
 
 export const controllerTryCatch =
@@ -51,12 +53,15 @@ export class ApiBadRequestError extends ApiError {
   }
 }
 export class ApiUnauthorizedError extends ApiError {
-  constructor(message: string, statusCode = HttpStatusCode.Unauthorized) {
+  constructor(
+    message = "unauthorized",
+    statusCode = HttpStatusCode.Unauthorized
+  ) {
     super(message, statusCode);
   }
 }
 export class ApiForbiddenError extends ApiError {
-  constructor(message: string, statusCode = HttpStatusCode.Forbidden) {
+  constructor(message = "forbidden", statusCode = HttpStatusCode.Forbidden) {
     super(message, statusCode);
   }
 }
@@ -67,7 +72,7 @@ export class ApiNotFoundError extends ApiError {
 }
 export class ApiInternalServerError extends ApiError {
   constructor(
-    message: string,
+    message = "server error",
     statusCode = HttpStatusCode.InternalServerError
   ) {
     super(message, statusCode);
@@ -76,11 +81,11 @@ export class ApiInternalServerError extends ApiError {
 
 // Error handler
 export class ErrorHandler {
-  public handleError(error: Error, res?: Response) {
+  public handleError(error: Error, res: Response) {
     logger.error("", error);
 
     if (!this.isOperationalError(error)) {
-      res?.status(HttpStatusCode.InternalServerError).json({
+      res.status(HttpStatusCode.InternalServerError).json({
         status: STATUS_CODES[HttpStatusCode.InternalServerError],
         error: "server error",
       });
@@ -89,7 +94,7 @@ export class ErrorHandler {
     }
 
     if (error instanceof ApiError) {
-      res?.status(error.statusCode).json({
+      res.status(error.statusCode).json({
         status: error.statusMessage,
         error: error.message,
       });
@@ -100,7 +105,7 @@ export class ErrorHandler {
     if (error instanceof ZodError) {
       const err = fromZodError(error);
 
-      res?.status(HttpStatusCode.BadRequest).json({
+      res.status(HttpStatusCode.BadRequest).json({
         status: STATUS_CODES[HttpStatusCode.BadRequest],
         error: err.message,
       });
@@ -108,8 +113,17 @@ export class ErrorHandler {
       return;
     }
 
+    if (error instanceof JsonWebTokenError) {
+      res.status(HttpStatusCode.Unauthorized).json({
+        status: STATUS_CODES[HttpStatusCode.Unauthorized],
+        error: "unauthorized",
+      });
+
+      return;
+    }
+
     if (error instanceof PrismaClientKnownRequestError) {
-      res?.status(HttpStatusCode.InternalServerError).json({
+      res.status(HttpStatusCode.InternalServerError).json({
         status: STATUS_CODES[HttpStatusCode.InternalServerError],
         error: "server error",
       });
@@ -120,6 +134,7 @@ export class ErrorHandler {
     if (
       error instanceof ApiError ||
       error instanceof ZodError ||
+      error instanceof JsonWebTokenError ||
       error instanceof PrismaClientKnownRequestError
     ) {
       return true;
