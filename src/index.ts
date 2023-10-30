@@ -5,14 +5,28 @@ import formData from "express-form-data";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
+import { S3 } from "@aws-sdk/client-s3";
 
 import { ErrorHandler } from "./utils/error-handler";
 import { httpLogger, logger } from "./utils/logger";
+import setupRouter from "./api/router/router";
+import { S3Util } from "./utils/s3-util";
 
 const app = express();
 const port = process.env.PORT || 8080;
 const errorHandler = new ErrorHandler();
 const prisma = new PrismaClient();
+const s3Client = new S3({
+  region: process.env.LINODE_OBJECT_STORAGE_REGION,
+  endpoint: process.env.LINODE_OBJECT_STORAGE_ENDPOINT,
+  credentials: {
+    accessKeyId: String(process.env.LINODE_OBJECT_STORAGE_ACCESS_KEY_ID),
+    secretAccessKey: String(
+      process.env.LINODE_OBJECT_STORAGE_SECRET_ACCESS_KEY
+    ),
+  },
+});
+const s3Util = new S3Util(s3Client);
 
 // parsing application/json
 app.use(express.json());
@@ -31,6 +45,17 @@ app.use(cookieParser());
 app.use(cors());
 app.use(helmet());
 app.use(httpLogger);
+
+setupRouter(app, prisma, s3Util, logger);
+
+process.on("unhandledRejection", (reason: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-throw-literal
+  throw reason;
+});
+
+process.on("uncaughtException", (error) => {
+  errorHandler.handleError(error, app.response);
+});
 
 app.use(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
